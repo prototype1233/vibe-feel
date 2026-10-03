@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Serif KR", serif, sans-serif;
+    background-color: #FBF9F5;
+    color: #292524;
+    overflow-x: hidden;
+  }
+}
+
+.font-serif-kr {
+  font-family: "Noto Serif KR", "Cormorant Garamond", serif;
+}
+
+.font-editorial {
+  font-family: "Cormorant Garamond", "Noto Serif KR", serif;
+}
+
+/* Custom vinyl rotation */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+.animate-spin-pause {
+  animation-play-state: paused;
+}
+
+/* Custom delicate scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 113, 108, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 113, 108, 0.4);
+}

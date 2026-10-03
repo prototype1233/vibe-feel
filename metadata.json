@@ -1,0 +1,7 @@
+{
+  "name": "Sentir - 감성 라이프스타일 큐레이션",
+  "description": "오늘의 기분과 생각을 마주하면 음악, 책, 패션, 티 페어링까지 당신의 결에 맞는 감성 라이프스타일을 큐레이션하고 소통하는 취향 살롱",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
