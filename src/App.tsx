@@ -3,13 +3,11 @@ import confetti from 'canvas-confetti';
 import { Navbar } from './components/Navbar';
 import { MoodInputSection } from './components/MoodInputSection';
 import { CuratedCapsuleCard } from './components/CuratedCapsuleCard';
-import { CommunityLounge } from './components/CommunityLounge';
 import { PersonalizedForYou } from './components/PersonalizedForYou';
 import { MyArchive } from './components/MyArchive';
 import { TastePreferenceModal } from './components/TastePreferenceModal';
 import { SharePostcardModal } from './components/SharePostcardModal';
-import { CategoryType, CuratedCapsule, TasteFriend, UserPreferences } from './types';
-import { INITIAL_COMMUNITY_CAPSULES, INITIAL_TASTE_FRIENDS } from './data/mockCommunity';
+import { CategoryType, CuratedCapsule, UserPreferences } from './types';
 import { generateOfflineCapsule } from './data/curationEngine';
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -25,7 +23,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 };
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'curate' | 'community' | 'personalized' | 'archive'>('curate');
+  const [currentTab, setCurrentTab] = useState<'curate' | 'personalized' | 'archive'>('curate');
   
   // User Preferences
   const [preferences, setPreferences] = useState<UserPreferences>(() => {
@@ -39,14 +37,6 @@ export default function App() {
 
   // Capsules State
   const [currentCapsule, setCurrentCapsule] = useState<CuratedCapsule | null>(null);
-  const [communityCapsules, setCommunityCapsules] = useState<CuratedCapsule[]>(() => {
-    try {
-      const saved = localStorage.getItem('sentir_community_capsules');
-      return saved ? JSON.parse(saved) : INITIAL_COMMUNITY_CAPSULES;
-    } catch {
-      return INITIAL_COMMUNITY_CAPSULES;
-    }
-  });
 
   const [myHistoryCapsules, setMyHistoryCapsules] = useState<CuratedCapsule[]>(() => {
     try {
@@ -57,7 +47,15 @@ export default function App() {
     }
   });
 
-  const [tasteFriends, setTasteFriends] = useState<TasteFriend[]>(INITIAL_TASTE_FRIENDS);
+  const [savedCapsules, setSavedCapsules] = useState<CuratedCapsule[]>(() => {
+    try {
+      const saved = localStorage.getItem('sentir_saved_capsules');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [dailyCapsule, setDailyCapsule] = useState<CuratedCapsule | null>(null);
 
   // UI States
@@ -72,17 +70,9 @@ export default function App() {
     try {
       localStorage.setItem('sentir_user_preferences', JSON.stringify(preferences));
     } catch {
-      // Ignore storage errors
-    }
-  }, [preferences]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('sentir_community_capsules', JSON.stringify(communityCapsules));
-    } catch {
       // Ignore
     }
-  }, [communityCapsules]);
+  }, [preferences]);
 
   useEffect(() => {
     try {
@@ -91,6 +81,14 @@ export default function App() {
       // Ignore
     }
   }, [myHistoryCapsules]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sentir_saved_capsules', JSON.stringify(savedCapsules));
+    } catch {
+      // Ignore
+    }
+  }, [savedCapsules]);
 
   // Generate initial daily capsule on mount
   useEffect(() => {
@@ -106,7 +104,7 @@ export default function App() {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   // Perform AI or Curated Curation
@@ -140,16 +138,15 @@ export default function App() {
         setCurrentCapsule(data.capsule);
         setMyHistoryCapsules(prev => [data.capsule, ...prev]);
         confetti({
-          particleCount: 60,
-          spread: 70,
+          particleCount: 50,
+          spread: 60,
           origin: { y: 0.6 },
           colors: ['#D97706', '#84A98C', '#64748B', '#78593A'],
         });
-        showToast('오늘의 감성 큐레이션 캡슐이 정성스럽게 완성되었습니다.');
+        showToast('오늘의 감성 큐레이션이 완성되었습니다.');
       }
     } catch (err) {
       console.warn('Backend curate call error, using local fallback:', err);
-      // Seamless client-side fallback
       const fallback = generateOfflineCapsule(thought, moodVibe, weather, categories, preferences);
       setCurrentCapsule(fallback);
       setMyHistoryCapsules(prev => [fallback, ...prev]);
@@ -201,8 +198,8 @@ export default function App() {
         return c;
       });
 
-    setCommunityCapsules(prev => updateList(prev));
     setMyHistoryCapsules(prev => updateList(prev));
+    setSavedCapsules(prev => updateList(prev));
     if (currentCapsule && currentCapsule.id === capsuleId) {
       setCurrentCapsule(prev => (prev ? updateList([prev])[0] : null));
     }
@@ -213,103 +210,34 @@ export default function App() {
 
   // Save / Bookmark Toggle
   const handleSaveToggle = (capsuleId: string) => {
-    const updateList = (list: CuratedCapsule[]) =>
-      list.map(c => {
-        if (c.id === capsuleId) {
-          return { ...c, savedByMe: !c.savedByMe };
-        }
-        return c;
-      });
+    let target = currentCapsule?.id === capsuleId ? currentCapsule : null;
+    if (!target) target = myHistoryCapsules.find(c => c.id === capsuleId) || null;
+    if (!target) target = dailyCapsule?.id === capsuleId ? dailyCapsule : null;
+    if (!target) target = savedCapsules.find(c => c.id === capsuleId) || null;
 
-    setCommunityCapsules(prev => updateList(prev));
-    setMyHistoryCapsules(prev => updateList(prev));
+    if (!target) return;
+
+    const alreadySaved = savedCapsules.some(c => c.id === capsuleId);
+
+    if (alreadySaved) {
+      setSavedCapsules(prev => prev.filter(c => c.id !== capsuleId));
+      showToast('보관함에서 제거되었습니다.');
+    } else {
+      const savedVersion = { ...target, savedByMe: true };
+      setSavedCapsules(prev => [savedVersion, ...prev]);
+      showToast('보관함에 저장되었습니다.');
+    }
+
+    // Toggle saved flag on active items
+    const updateSavedFlag = (c: CuratedCapsule) => (c.id === capsuleId ? { ...c, savedByMe: !alreadySaved } : c);
+    setMyHistoryCapsules(prev => prev.map(updateSavedFlag));
     if (currentCapsule && currentCapsule.id === capsuleId) {
-      setCurrentCapsule(prev => (prev ? updateList([prev])[0] : null));
+      setCurrentCapsule(prev => (prev ? updateSavedFlag(prev) : null));
     }
     if (dailyCapsule && dailyCapsule.id === capsuleId) {
-      setDailyCapsule(prev => (prev ? updateList([prev])[0] : null));
-    }
-    showToast('나의 감성 서재에 보관 상태가 변경되었습니다.');
-  };
-
-  // Add Comment
-  const handleAddComment = (capsuleId: string, text: string) => {
-    const newComment = {
-      id: 'comment_' + Date.now(),
-      authorName: preferences.nickname || '나의 취향',
-      authorAvatar: preferences.avatar || '🌿',
-      text,
-      createdAt: '방금 전',
-    };
-
-    const updateComments = (list: CuratedCapsule[]) =>
-      list.map(c => {
-        if (c.id === capsuleId) {
-          return {
-            ...c,
-            comments: [...(c.comments || []), newComment],
-          };
-        }
-        return c;
-      });
-
-    setCommunityCapsules(prev => updateComments(prev));
-    setMyHistoryCapsules(prev => updateComments(prev));
-    if (currentCapsule && currentCapsule.id === capsuleId) {
-      setCurrentCapsule(prev => (prev ? updateComments([prev])[0] : null));
-    }
-    if (dailyCapsule && dailyCapsule.id === capsuleId) {
-      setDailyCapsule(prev => (prev ? updateComments([prev])[0] : null));
+      setDailyCapsule(prev => (prev ? updateSavedFlag(prev) : null));
     }
   };
-
-  // Share to Lounge
-  const handleShareToCommunity = (capsule: CuratedCapsule) => {
-    // Check if already in community
-    const exists = communityCapsules.some(c => c.id === capsule.id);
-    if (!exists) {
-      const publicVersion = {
-        ...capsule,
-        isPublic: true,
-        createdAt: '방금 전',
-        author: {
-          id: 'me',
-          name: preferences.nickname || '나의 취향',
-          avatar: preferences.avatar || '🌿',
-          tasteTag: preferences.vibeKeywords?.[0] || '감성 아키비스트',
-        },
-      };
-      setCommunityCapsules(prev => [publicVersion, ...prev]);
-    }
-
-    confetti({
-      particleCount: 50,
-      spread: 60,
-      origin: { y: 0.6 },
-    });
-    showToast('취향 살롱에 오늘의 감성 캡슐이 공유되었습니다!');
-    setCurrentTab('community');
-  };
-
-  // Follow Friend
-  const handleToggleFollowFriend = (friendId: string) => {
-    setTasteFriends(prev =>
-      prev.map(f => {
-        if (f.id === friendId) {
-          const updated = !f.isFollowing;
-          showToast(updated ? `${f.name} 님을 취향 이웃으로 추가했습니다.` : `${f.name} 님을 팔로우 해제했습니다.`);
-          return { ...f, isFollowing: updated };
-        }
-        return f;
-      })
-    );
-  };
-
-  // Compute all saved capsules
-  const savedCapsules = [
-    ...communityCapsules.filter(c => c.savedByMe),
-    ...myHistoryCapsules.filter(c => c.savedByMe),
-  ].filter((c, index, self) => index === self.findIndex(t => t.id === c.id));
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FBF9F5] text-stone-900 selection:bg-amber-100 selection:text-stone-900">
@@ -324,11 +252,11 @@ export default function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-12">
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
         
-        {/* VIEW 1: CURATION STUDIO */}
+        {/* VIEW 1: CURATION */}
         {currentTab === 'curate' && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             
             {/* Input Form */}
             <MoodInputSection
@@ -338,7 +266,7 @@ export default function App() {
 
             {/* Generated Capsule Result */}
             {currentCapsule && (
-              <section className="space-y-4 pt-2">
+              <section className="space-y-3 pt-2">
                 <div className="flex items-center justify-between border-b border-stone-200/80 pb-2">
                   <span className="text-xs font-semibold text-stone-800 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse" />
@@ -359,9 +287,7 @@ export default function App() {
                   capsule={currentCapsule}
                   onLikeToggle={handleLikeToggle}
                   onSaveToggle={handleSaveToggle}
-                  onShareToCommunity={handleShareToCommunity}
                   onOpenCardExport={setExportCapsule}
-                  onAddComment={handleAddComment}
                 />
               </section>
             )}
@@ -380,25 +306,10 @@ export default function App() {
             onLikeToggle={handleLikeToggle}
             onSaveToggle={handleSaveToggle}
             onOpenCardExport={setExportCapsule}
-            onAddComment={handleAddComment}
           />
         )}
 
-        {/* VIEW 3: COMMUNITY LOUNGE */}
-        {currentTab === 'community' && (
-          <CommunityLounge
-            capsules={communityCapsules}
-            tasteFriends={tasteFriends}
-            onToggleFollowFriend={handleToggleFollowFriend}
-            onLikeToggle={handleLikeToggle}
-            onSaveToggle={handleSaveToggle}
-            onAddComment={handleAddComment}
-            onOpenCardExport={setExportCapsule}
-            onNavigateToCurate={() => setCurrentTab('curate')}
-          />
-        )}
-
-        {/* VIEW 4: MY ARCHIVE */}
+        {/* VIEW 3: MY ARCHIVE */}
         {currentTab === 'archive' && (
           <MyArchive
             savedCapsules={savedCapsules}
@@ -406,7 +317,6 @@ export default function App() {
             onLikeToggle={handleLikeToggle}
             onSaveToggle={handleSaveToggle}
             onOpenCardExport={setExportCapsule}
-            onAddComment={handleAddComment}
             onNavigateToCurate={() => setCurrentTab('curate')}
           />
         )}
@@ -414,7 +324,7 @@ export default function App() {
       </main>
 
       {/* Editorial Footer */}
-      <footer className="border-t border-stone-200/80 py-8 text-center text-xs text-stone-400 font-sans">
+      <footer className="border-t border-stone-200/80 py-6 text-center text-xs text-stone-400 font-sans">
         Sentir · 감성 라이프스타일 큐레이션
       </footer>
 
@@ -425,7 +335,7 @@ export default function App() {
         preferences={preferences}
         onSavePreferences={updated => {
           setPreferences(updated);
-          showToast('취향 프로필이 성공적으로 업데이트되었습니다.');
+          showToast('취향 프로필이 업데이트되었습니다.');
         }}
       />
 
@@ -438,7 +348,7 @@ export default function App() {
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-stone-900 text-white text-xs font-serif-kr px-4 py-3 rounded-2xl shadow-xl border border-stone-800 animate-fade-in flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 z-50 bg-stone-900 text-white text-xs font-serif-kr px-4 py-2.5 rounded-xl shadow-lg border border-stone-800 animate-fade-in flex items-center gap-1.5">
           <span className="text-amber-400">✨</span>
           <span>{toastMessage}</span>
         </div>

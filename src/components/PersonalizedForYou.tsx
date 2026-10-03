@@ -12,7 +12,6 @@ interface PersonalizedForYouProps {
   onLikeToggle: (capsuleId: string) => void;
   onSaveToggle: (capsuleId: string) => void;
   onOpenCardExport: (capsule: CuratedCapsule) => void;
-  onAddComment: (capsuleId: string, text: string) => void;
 }
 
 export const PersonalizedForYou: React.FC<PersonalizedForYouProps> = ({
@@ -24,7 +23,6 @@ export const PersonalizedForYou: React.FC<PersonalizedForYouProps> = ({
   onLikeToggle,
   onSaveToggle,
   onOpenCardExport,
-  onAddComment,
 }) => {
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -83,7 +81,6 @@ export const PersonalizedForYou: React.FC<PersonalizedForYouProps> = ({
             onLikeToggle={onLikeToggle}
             onSaveToggle={onSaveToggle}
             onOpenCardExport={onOpenCardExport}
-            onAddComment={onAddComment}
           />
         </div>
       )}

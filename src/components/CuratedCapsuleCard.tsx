@@ -2,15 +2,12 @@ import React, { useState } from 'react';
 import {
   Heart,
   Bookmark,
-  Share2,
   ExternalLink,
-  MessageSquare,
   Play,
   Pause,
   Coffee,
   Film,
   Wind,
-  Send,
   Download,
   ChevronLeft,
   ChevronRight,
@@ -23,22 +20,16 @@ interface CuratedCapsuleCardProps {
   capsule: CuratedCapsule;
   onLikeToggle?: (capsuleId: string) => void;
   onSaveToggle?: (capsuleId: string) => void;
-  onShareToCommunity?: (capsule: CuratedCapsule) => void;
   onOpenCardExport?: (capsule: CuratedCapsule) => void;
-  onAddComment?: (capsuleId: string, text: string) => void;
 }
 
 export const CuratedCapsuleCard: React.FC<CuratedCapsuleCardProps> = ({
   capsule,
   onLikeToggle,
   onSaveToggle,
-  onShareToCommunity,
   onOpenCardExport,
-  onAddComment,
 }) => {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const [showComments, setShowComments] = useState(false);
-  const [newCommentText, setNewCommentText] = useState('');
   
   // Available tabs
   const availableTabs: { id: string; label: string; icon: string }[] = [];
@@ -78,13 +69,6 @@ export const CuratedCapsuleCard: React.FC<CuratedCapsuleCardProps> = ({
     }
   };
 
-  const handleCommentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCommentText.trim() || !onAddComment) return;
-    onAddComment(capsule.id, newCommentText.trim());
-    setNewCommentText('');
-  };
-
   const openExternalMusicSearch = (query: string) => {
     const encoded = encodeURIComponent(query);
     window.open(`https://www.youtube.com/results?search_query=${encoded}`, '_blank');
@@ -103,13 +87,9 @@ export const CuratedCapsuleCard: React.FC<CuratedCapsuleCardProps> = ({
 
       <div className="p-5 sm:p-6 space-y-4">
         
-        {/* Header: Author & Mood */}
-        <div className="flex items-center justify-between text-xs text-stone-500 border-b border-stone-100 pb-2.5">
-          <div className="flex items-center gap-1.5">
-            <span className="text-base">{capsule.author.avatar || '🌿'}</span>
-            <span className="font-medium text-stone-800">{capsule.author.name}</span>
-          </div>
-
+        {/* Header: Date & Mood */}
+        <div className="flex items-center justify-between text-xs text-stone-500 border-b border-stone-100 pb-2">
+          <span className="font-serif-kr text-[11px] text-stone-400">{capsule.createdAt}</span>
           <span className="px-2 py-0.5 rounded-full bg-stone-100 text-stone-700 font-serif-kr text-[11px]">
             {capsule.moodVibe}
           </span>
@@ -153,7 +133,7 @@ export const CuratedCapsuleCard: React.FC<CuratedCapsuleCardProps> = ({
           </button>
         </div>
 
-        {/* Card Content (Zero Fluff, Clean Info) */}
+        {/* Card Content */}
         <div>
           
           {/* 1. MUSIC CARD */}
@@ -370,75 +350,23 @@ export const CuratedCapsuleCard: React.FC<CuratedCapsuleCardProps> = ({
               }`}
             >
               <Bookmark className={`w-3.5 h-3.5 ${capsule.savedByMe ? 'fill-amber-700 text-amber-700' : ''}`} />
-              <span>{capsule.savedByMe ? '저장됨' : '저장'}</span>
-            </button>
-
-            <button
-              onClick={() => setShowComments(!showComments)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors cursor-pointer"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>{capsule.comments?.length || 0}</span>
+              <span>{capsule.savedByMe ? '보관됨' : '보관하기'}</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div>
             {onOpenCardExport && (
               <button
                 onClick={() => onOpenCardExport(capsule)}
-                className="p-1.5 text-stone-500 hover:text-stone-800 rounded-full hover:bg-stone-100 cursor-pointer"
-                title="엽서 저장"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors cursor-pointer text-xs"
+                title="감성 엽서 카드 저장"
               >
                 <Download className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            {onShareToCommunity && (
-              <button
-                onClick={() => onShareToCommunity(capsule)}
-                className="flex items-center gap-1 px-3 py-1 rounded-full bg-stone-900 text-white text-xs hover:bg-stone-800 transition-colors cursor-pointer"
-              >
-                <Share2 className="w-3 h-3" />
-                <span>공유</span>
+                <span>엽서 저장</span>
               </button>
             )}
           </div>
         </div>
-
-        {/* Comments Drawer */}
-        {showComments && (
-          <div className="pt-2 border-t border-stone-100 space-y-2">
-            <div className="space-y-1.5 max-h-36 overflow-y-auto">
-              {capsule.comments && capsule.comments.length > 0 ? (
-                capsule.comments.map(c => (
-                  <div key={c.id} className="text-xs bg-stone-50 p-2 rounded-lg">
-                    <span className="font-semibold text-stone-800 mr-2">{c.authorName}</span>
-                    <span className="text-stone-700 font-serif-kr">{c.text}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-xs text-stone-400 text-center py-1">첫 댓글을 남겨보세요.</div>
-              )}
-            </div>
-
-            <form onSubmit={handleCommentSubmit} className="flex gap-1.5">
-              <input
-                type="text"
-                value={newCommentText}
-                onChange={e => setNewCommentText(e.target.value)}
-                placeholder="댓글 남기기..."
-                className="flex-1 px-3 py-1 rounded-lg border border-stone-200 text-xs font-serif-kr focus:outline-none focus:ring-1 focus:ring-stone-400"
-              />
-              <button
-                type="submit"
-                disabled={!newCommentText.trim()}
-                className="px-2.5 py-1 bg-stone-900 text-white rounded-lg text-xs disabled:opacity-40 cursor-pointer"
-              >
-                <Send className="w-3 h-3" />
-              </button>
-            </form>
-          </div>
-        )}
 
       </div>
     </article>

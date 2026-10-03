@@ -9,7 +9,6 @@ interface MyArchiveProps {
   onLikeToggle: (capsuleId: string) => void;
   onSaveToggle: (capsuleId: string) => void;
   onOpenCardExport: (capsule: CuratedCapsule) => void;
-  onAddComment: (capsuleId: string, text: string) => void;
   onNavigateToCurate: () => void;
 }
 
@@ -19,7 +18,6 @@ export const MyArchive: React.FC<MyArchiveProps> = ({
   onLikeToggle,
   onSaveToggle,
   onOpenCardExport,
-  onAddComment,
   onNavigateToCurate,
 }) => {
   const [archiveTab, setArchiveTab] = useState<'history' | 'saved'>('history');
@@ -77,7 +75,6 @@ export const MyArchive: React.FC<MyArchiveProps> = ({
               onLikeToggle={onLikeToggle}
               onSaveToggle={onSaveToggle}
               onOpenCardExport={onOpenCardExport}
-              onAddComment={onAddComment}
             />
           ))
         ) : (
